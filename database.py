@@ -18,11 +18,6 @@ def add_count(tg_id):
     connection.commit()
 
 
-# def check_count(tg_id):
-#     if sql.execute('SELECT counter FROM users WHERE id=?;', (tg_id,)).fetchone():
-#         return sql.execute('SELECT counter FROM users WHERE id=?;', (tg_id,)).fetchone()
-#     else:
-#        return False
 def check_count(tg_id):
     result = sql.execute('SELECT counter FROM users WHERE id=?;', (tg_id,)).fetchone()
     if result:
