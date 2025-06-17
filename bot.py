@@ -3,7 +3,7 @@ import requests
 import io
 from googletrans import Translator
 
-TELEGRAM_TOKEN = "7750734085:AAE4ezbZYWqDczqUujLntkV7H7HBI6nGjII"
+TELEGRAM_TOKEN = "7545681011:AAFw7bbmAMjjQBWwVay0sEDgi-R_wJB_wxk"
 STABILITY_KEY = "sk-3hfMRnb13SESUrFlKszX1oq31bttQ4DpAqb8tHL0fQVdkbmX"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
