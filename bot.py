@@ -1,41 +1,59 @@
 import telebot
-import database as db
-import img_gen as ig
-from deep_translator import GoogleTranslator
+import requests
+import io
+from googletrans import Translator
 
+TELEGRAM_TOKEN = "7750734085:AAE4ezbZYWqDczqUujLntkV7H7HBI6nGjII"
+STABILITY_KEY = "sk-3hfMRnb13SESUrFlKszX1oq31bttQ4DpAqb8tHL0fQVdkbmX"
 
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+translator = Translator()
 
-bot = telebot.TeleBot('7952352811:AAEqgtz9v94gFEWoFnLHiTEZYGI2Q7AJylQ')
-
+def translate_to_english(text):
+    try:
+        translation = translator.translate(text, dest='en')
+        return translation.text
+    except Exception as e:
+        print(f"Ошибка перевода: {e}")
+        return text
 
 @bot.message_handler(commands=['start'])
-def start_message(message):
-    user_id = message.from_user.id
-    if db.check_count(user_id):
-        bot.send_message(user_id, 'Напишите запрос и я сгенерирую по нему фото!')
-        bot.register_next_step_handler(message, get_prompt)
-    else:
-        db.register(user_id)
-        bot.send_message(user_id, 'Напишите запрос и я сгенерирую по нему фото!')
-        bot.register_next_step_handler(message, get_prompt)
+def start(msg):
+    bot.send_message(msg.chat.id, "👋 Привет! Напиши, что ты хочешь увидеть, и я сгенерирую картинку ✨")
 
-def get_prompt(message):
-    user_id = message.from_user.id
-    prompt = message.text
+@bot.message_handler(func=lambda m: True)
+def gen(msg):
+    original_prompt = msg.text
+    prompt = translate_to_english(original_prompt)
 
-    if db.check_count(user_id) <= 5:
-        try:
-            prompt = GoogleTranslator(source='auto', target='en').translate(message.text)
-            image = ig.get_link(prompt)
-            bot.send_photo(user_id, photo=image)
-            bot.send_message(user_id, 'Готово!')
-            db.add_count(user_id)
-            bot.register_next_step_handler(message, get_prompt)
-        except:
-            bot.send_message(user_id, 'Видимо, ошибка в запросе. Попробуйте еще раз')
-            bot.register_next_step_handler(message, get_prompt)
-    else:
-        bot.send_message(user_id, 'Похоже, что ты истратил все токены.\n'
-                                  'Оплати подписку или жди следующего месяца')
+    bot.send_message(msg.chat.id, f"🎨 Генерирую изображение по запросу:\n«{original_prompt}»")
 
-bot.polling(non_stop=True)
+    files = {
+        "prompt": (None, prompt),
+        "model": (None, "sd3"),
+        "mode": (None, "text-to-image"),
+        "aspect_ratio": (None, "1:1"),
+        "seed": (None, "0"),
+        "output_format": (None, "png")
+    }
+
+    try:
+        resp = requests.post(
+            "https://api.stability.ai/v2beta/stable-image/generate/sd3",
+            headers={
+                "Authorization": f"Bearer {STABILITY_KEY}",
+                "Accept": "image/*"
+            },
+            files=files,
+            timeout=60
+        )
+
+        if resp.status_code == 200:
+            bot.send_photo(msg.chat.id, io.BytesIO(resp.content))
+        else:
+            bot.send_message(msg.chat.id, f"❌ Ошибка {resp.status_code}:\n{resp.text}")
+
+    except Exception as e:
+        bot.send_message(msg.chat.id, f"⚠️ Произошла ошибка при обращении к API: {e}")
+
+bot.polling()
